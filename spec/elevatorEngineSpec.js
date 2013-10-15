@@ -1,7 +1,7 @@
 describe("Code Story Elevator", function() {
 	
 	it("init state: doors are closed.", function() {
-		expect(elevator.doors).toEqual("CLOSE");
+		expect(elevator.state).toEqual("CLOSE");
 		expect(elevator.isOpen()).toEqual(false);
 	});
 
@@ -22,26 +22,98 @@ describe("Code Story Elevator", function() {
 	it("first call to the next command", function() {
 		expect(nextStep()).toEqual("NOTHING");
 	});
-	
+
+	it("next step of CLOSE is UP if command for up floor", function() {
+		reset();
+    	elevator.addCommand({floor : 5, direction : "DOWN"});
+    	expect(nextStep()).toEqual("UP");
+	});
+	it("next step of CLOSE is DOWN if command for down floor", function() {
+	    reset();
+		elevator.floor = 4;
+    	elevator.addCommand({floor : 2, direction : "DOWN"});
+    	expect(nextStep()).toEqual("DOWN");
+	});
+
+	it("next step of CLOSE is OPEN if command at same floor", function() {
+		reset();
+    	elevator.addCommand({floor : 0, direction : "UP"});
+    	expect(nextStep()).toEqual("OPEN");
+	});
+
+	it("next step of OPEN is CLOSE if command for other floor", function() {
+		elevator.state = "OPEN";
+		elevator.floor = 1;
+    	elevator.addCommand({floor : 5, direction : "DOWN"});
+    	expect(nextStep()).toEqual("CLOSE");
+	});
+	it("next step of OPEN is NOTHING if command for same floor", function() {
+		elevator.state = "OPEN";
+		elevator.addCommand({floor : 1, direction : "DOWN"});
+		elevator.floor = 1;
+    	expect(nextStep()).toEqual("NOTHING");
+	});
+
+	it("next step of OPEN is CLOSE if no more command", function() {
+		elevator.state = "OPEN";
+		elevator.floor = 1;
+    	expect(nextStep()).toEqual("CLOSE");
+	});
+
+	it("next step of UP is OPEN if arrived at floor", function() {
+		elevator.state = "UP";
+		elevator.floor = 1;
+    	elevator.addCommand({floor : 2, direction : "DOWN"});
+    	expect(nextStep()).toEqual("CLOSE");
+	});
+	it("next step of DOWN is OPEN if arrived at floor", function() {
+		elevator.state = "DOWN";
+		elevator.floor = 1;
+    	elevator.addCommand({floor : 0, direction : "DOWN"});
+    	expect(nextStep()).toEqual("CLOSE");
+	});
+
+
 	it("reset after adding a command", function() {
 		
 		elevator.addCommand("new command");
 		
 		expect(reset()).toEqual("");
-		expect(elevator.doors).toEqual("CLOSE");
+		expect(elevator.state).toEqual("CLOSE");
+		expect(elevator.noCommand()).toEqual(true);
 		expect(elevator.commands.length).toEqual(0);
 	});
 
 	it("calling the elevator up to first floor", function() {
-				
+		reset();
 		expect(call(1, "UP")).toEqual("");
-		expect(elevator.doors).toEqual("CLOSE");
+
 		expect(elevator.commands[0].floor).toEqual(1);
 		expect(elevator.commands[0].direction).toEqual("UP");
-		expect(elevator.nextFloor()).toEqual(1);
+
+		expect(nextStep()).toEqual("UP");
+		expect(elevator.state).toEqual("UP");
+		expect(elevator.floor).toEqual(1);
 	});
 
-	
+	it("command call up to first floor is treated", function() {
+		reset();
+		expect(call(1, "UP")).toEqual("");
+
+        nextStep();
+		expect(elevator.state).toEqual("UP");
+		expect(elevator.floor).toEqual(1);
+
+		nextStep();
+		expect(elevator.state).toEqual("OPEN");
+		expect(elevator.floor).toEqual(1);
+		expect(elevator.move).toEqual("UP");
+		expect(elevator.noCommand()).toEqual(true);
+//TODO to be continued : testing nextfloor
+
+	});
+
+
 	it("3 calls to the elevator up and down", function() {
 		reset();
 		expect(call(5, "UP")).toEqual("");
