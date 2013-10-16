@@ -130,6 +130,9 @@ var elevator = {
 	newIndex : function(){
 		if(this.curIndex > this.commands.length - 1){
 			this.curIndex = this.commands.length - 1;
+			this.moving = "DOWN";
+		}else if(this.curIndex == 0){
+		    this.moving = "UP";
 		}else if(this.moving == "DOWN"){
 			this.curIndex --;
 			console.log("updating curIndex ", this.curIndex);
@@ -141,15 +144,10 @@ var elevator = {
 	        return null;
 	    }
 		var next = this.commands[this.curIndex];
-	/*	if(this.isFinished(next)){
-			this.commands.splice(this.curIndex, 1); //la commande a été traitée
-			if(this.hasCommand()){
-				this.newIndex();
-				next = this.commands[this.curIndex];
-			}else{
-				next = null;
-			}
-		}*/
+		if(this.isFinished(next)){
+		    this.removeFinishedCommand();
+		    next = this.nextCommand();
+		}
 		return next;		
 	},
 
