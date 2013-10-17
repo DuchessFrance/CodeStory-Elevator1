@@ -8,6 +8,8 @@ if (typeof (console) == 'undefined' || console == null) {
         }
     }
 }
+var MAX_FLOOR = 6;
+var MIN_FLOOR = 0;
 
 var elevator = {
     
@@ -30,6 +32,10 @@ var elevator = {
 
 
     addCommand : function(command){
+        if(( command.floor > MAX_FLOOR) || (command.floor < MIN_FLOOR)){
+            return "Hey what's the fuck is this floor you are asking !"
+        }
+
        var insertAt = 0;
        if(this.noCommand()) {
             this.commands.push(command);
@@ -43,6 +49,8 @@ var elevator = {
         }
         console.log("ADD COMMAND", command);
         console.log("inserted at " + insertAt + " in ", this.commands);
+
+        return "";
     },
 
 
@@ -240,8 +248,7 @@ function call(toFloorCall, to){
     } 
 
     console.log("CALL : ", command);    
-    elevator.addCommand(command);
-    return "";
+    return elevator.addCommand(command);
 }
 
 function go(toGo){
@@ -254,9 +261,7 @@ function go(toGo){
         floor : toGo,
         direction : direction
     }
-    elevator.addCommand(command);
-    console.log("GO : ", command);    
-    return "";
+    return elevator.addCommand(command);
 }
 
 function userHasEntered(){
