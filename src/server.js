@@ -29,8 +29,8 @@ function start() {
         response.end();
     }
 
-    http.createServer(onRequest).listen(9000);
-    console.log("Server has started at localhost:9000.");
+    http.createServer(onRequest).listen(process.env.PORT || 5000);
+    console.log("Server has started at localhost:5000.");
 }
 
 
