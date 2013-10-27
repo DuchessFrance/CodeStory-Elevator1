@@ -54,12 +54,6 @@ var elevator = {
             return;
         }
 
-/*
-        if( ["UP", "DOWN"].indexOf(command.direction) == -1){
-            command.direction = (this.floor < command.floor ? "UP" : "DOWN") ;
-        }
-*/
-
         if(( command.floor > MAX_FLOOR) || (command.floor < MIN_FLOOR)){
             return "Hey what's the fuck is this floor you are asking !"
         }
@@ -68,10 +62,8 @@ var elevator = {
             this.phase = (this.floor < command.floor) ? "UP" : "DOWN" ;
         }
 
-        //var commands = this.getArrayCmds(command.direction) ;
         var commands = (this.floor < command.floor) ? this.upCommands : this.downCommands ;
 
-        //commands.push(command);
         this.insertCommand(commands, command);
 
         return "";
