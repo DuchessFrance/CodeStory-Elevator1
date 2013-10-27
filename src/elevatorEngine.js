@@ -8,122 +8,153 @@ if (typeof (console) == 'undefined' || console == null) {
         }
     }
 }
-var MAX_FLOOR = 6;
+var MAX_FLOOR = 5;
 var MIN_FLOOR = 0;
 
 var elevator = {
-    
+
     floor : 0,
     state : "CLOSE",
-    commands : [],
-    curIndex : 0,
-    moving : "STOP",
+    phase : "UP",
+
+    upCommands : [],
+    downCommands : [],
 
     isOpen : function(){
         return this.state == "OPEN";
     },
 
-    noCommand : function(){
-        return this.commands.length == 0;
-    },
+
     hasCommand : function(){
-        return this.commands.length > 0;
+        return (this.upCommands.length > 0) || (this.downCommands.length > 0) ;
     },
 
+    getArrayCmds : function(way){
+        return way == "DOWN"? this.downCommands : this.upCommands;
+    },
+
+    getUpCommands : function(){
+        return this.upCommands;
+    },
+
+    getDownCommands : function(){
+        return this.downCommands;
+    },
+
+    changePhase : function(){
+        if(this.phase == "UP"){
+			this.phase = "DOWN";
+		}else{
+			this.phase = "UP";
+		}
+    },
 
     addCommand : function(command){
+        if( !command.floor && (command.floor != 0) ){
+            return;
+        }
+
+/*
+        if( ["UP", "DOWN"].indexOf(command.direction) == -1){
+            command.direction = (this.floor < command.floor ? "UP" : "DOWN") ;
+        }
+*/
+
         if(( command.floor > MAX_FLOOR) || (command.floor < MIN_FLOOR)){
             return "Hey what's the fuck is this floor you are asking !"
         }
 
-       var insertAt = 0;
-       if(this.noCommand()) {
-            this.commands.push(command);
-        } else {
-            insertAt = this.locationOf(command);
-            this.commands.splice( insertAt, 0, command);
-            if((insertAt <= this.curIndex) && (command.floor < this.floor)){
-                this.curIndex ++;
-            }
-
+        if(!this.hasCommand()){
+            this.phase = (this.floor < command.floor) ? "UP" : "DOWN" ;
         }
-        console.log("ADD COMMAND", command);
-        console.log("inserted at " + insertAt + " in ", this.commands);
+
+        //var commands = this.getArrayCmds(command.direction) ;
+        var commands = (this.floor < command.floor) ? this.upCommands : this.downCommands ;
+
+        //commands.push(command);
+        this.insertCommand(commands, command);
 
         return "";
     },
 
+    insertCommand : function(commands, command){
+       if(commands.length == 0) {
+            commands.push(command);
+        } else {
+            var insertAt = this.locationOf(commands, command);
+            commands.splice( insertAt, 0, command);
+        }
+    },
 
-    locationOf : function (command, start, end) {
+    locationOf : function (commands, command, start, end) {
         start = start || 0;
-        end = end || this.commands.length;
+        end = end || commands.length;
         var pivot = parseInt(start + (end - start) / 2);
 
         if(end-start <= 1){
-            return this.commands[pivot].floor > command.floor ? pivot : pivot + 1 ;
+            return commands[pivot].floor > command.floor ? pivot : pivot + 1 ;
         }
-        if(this.commands[pivot].floor == command.floor){
+        if(commands[pivot].floor == command.floor){
             do{
-                pivot ++ 
-            }while( this.commands[pivot] && (this.commands[pivot].floor == command.floor));
-            
-            return pivot;  
+                pivot ++
+            }while( commands[pivot] && (commands[pivot].floor == command.floor));
+
+            return pivot;
         }
-
-
-        if(this.commands[pivot].floor < command.floor) {
-            return this.locationOf(command, pivot, end);
+        if(commands[pivot].floor < command.floor) {
+            return this.locationOf(commands, command, pivot, end);
         } else{
-            return this.locationOf(command, start, pivot);
+            return this.locationOf(commands, command, start, pivot);
         }
-    }, 
+    },
 
-   nextState : function(){
+   updateState : function(command){
+		if(!this.hasCommand()){
+			this.state = "CLOSE" ;
+			return;
+		}
+
+        var move = (this.floor > command.floor) ? "DOWN" : ( (this.floor < command.floor) ? "UP" : "STOP" );
+
         var nextState ;
-
-		var command = this.nextCommand();
-        var toGo = command ? command.floor : null ;
-        var move = (this.floor > toGo) ? "DOWN" : ( (this.floor < toGo) ? "UP" : "STOP" );
-
         switch(this.state){
             case "CLOSE" :
-                nextState = ((null == toGo) ? "CLOSE" : (move == "STOP" ? "OPEN": move ) ) ;
+                nextState = (move == "STOP") ? "OPEN": move ;
                 break;
             case "OPEN" :
-                nextState = ((toGo > -1) && (toGo == this.floor) ? "OPEN": "CLOSE") ;
+                nextState = (move == "STOP") ? "OPEN": "CLOSE" ;
+                //nextState = "CLOSE" ;
                 break;
             case "UP" :
-                nextState = ((move == "STOP") && toGo > -1) ? "OPEN": move ;
+                nextState = (move == "STOP") ? "OPEN": move ;
                 break;
             case "DOWN" :
-                nextState = ((move == "STOP") && toGo > -1 ) ? "OPEN": move ;
+                nextState = (move == "STOP") ? "OPEN": move ;
                 break;
             default :
-                nextState = "CLOSE";
+                nextState = this.state;//impossible
                 break;
         }
-        return nextState;
+        this.state = nextState;
     },	
 
-    changeState : function(){
-        var state = this.nextState();
-        switch(state){
+    executeNext : function(){
+        var command = this.nextCommand();
+        this.updateState(command);
+
+        switch(this.state){
             case "OPEN":
-                this.state = "OPEN";
                 this.removeFinishedCommand();
                 break;
             case "UP" :
                 this.floor++;
-                this.state = "UP";
-				this.moving = "UP";
+				this.phase = "UP";
                 break ;
             case "DOWN":
                 this.floor--;
-                this.state = "DOWN";
-				this.moving = "DOWN";
+				this.phase = "DOWN";
                 break;
             case "CLOSE":
-                this.state = "CLOSE";
                 break;
             default :
                 break;
@@ -132,95 +163,71 @@ var elevator = {
     },
 	
 	isFinished : function(command){
-		return (command.floor == this.floor) && this.isOpen();
+		return command.floor && (command.floor == this.floor) && this.isOpen();
 	},
-	
-	newIndex : function(){
-		if(this.curIndex > this.commands.length - 1){
-			this.curIndex = this.commands.length - 1;
-			this.moving = "DOWN";
-		}else if(this.curIndex == 0){
-		    this.moving = "UP";
-		}else if(this.moving == "DOWN"){
-			this.curIndex --;
-			console.log("updating curIndex ", this.curIndex);
-		}	
-	},
-	
+
+
 	nextCommand : function(){
 	    if(!this.hasCommand()){
 	        return null;
 	    }
-		var next = this.commands[this.curIndex];
-		if(this.isFinished(next)){
+	    console.log(this.upCommands);
+	    console.log(this.downCommands);
+	    console.log(this.phase);
+	    var next = this.nextFromArray();
+	    if((next.direction != this.phase)
+	        && (this.floor == next.floor)
+	        && (this.state != "OPEN")
+	        && (this.getArrayCmds(this.phase).length > 1)){//next n'est pas à traiter maintenant
+	        this.changeArray(next);
+	        next = this.nextCommand();
+	    }
+		if(this.isFinished(next)){//same command as actual state
 		    this.removeFinishedCommand();
 		    next = this.nextCommand();
 		}
-		return next;		
+		return next;
+
+	},
+
+	nextFromArray : function(){
+	    var next = null;
+	    var commands = this.getArrayCmds(this.phase);
+	    if(this.phase == "UP"){
+	        next = commands[0];
+	    }else{
+	        next = commands[commands.length - 1];
+	    }
+	    return next;
 	},
 
 	removeFinishedCommand : function(){
-        this.commands.splice(this.curIndex, 1); //la commande a été traitée
-        if(this.hasCommand()){
-            this.newIndex();
-        }
+		var commands = this.getArrayCmds(this.phase);
+	    if(this.phase == "UP"){
+		    commands.shift();
+	    }else{
+	        commands.pop();
+	    }
+
+		if(commands.length == 0){
+			this.changePhase();
+		}
 	},
 
-/*
-    nextFloor : function(){
-    console.log("NEXT FLOOR commands before ", this.commands);
-        if(this.noCommand()){
-            return null;
-        }
-
-       console.log("curIndex " + this.curIndex);
-        var next = this.commands[this.curIndex];
-
-        if( (next.floor == this.floor) && this.isOpen()) {
-            console.log("command finished");
-            this.commands.splice(this.curIndex, 1); //la commande a été traitée
-
-            if(this.commands.length == 0){
-                this.moving = "STOP";
-                console.log("no more command");
-                return ; //no more commands;
-            }
-
-            if(this.curIndex > this.commands.length - 1){
-                this.curIndex = this.commands.length - 1;
-                this.moving = "DOWN";
-                console.log("changing direction to DOWN " + this.curIndex);
-            }else if(this.curIndex == 0 && this.moving == "DOWN"){
-                this.moving = "UP";
-            } else if(this.moving == "DOWN"){
-                this.curIndex --;
-                console.log("updating curIndex ", this.curIndex);
-            }
-
-
-
-            next = this.commands[this.curIndex];
-        }
-
-        if(this.moving == "STOP"){
-            if(next.floor >= this. floor){
-                this.moving = "UP";
-            }else{
-                this.moving = "DOWN";
-            }
-        }
-        console.log("NEXT FLOOR commands After ", this.commands);
-        return next.floor;
+    changeArray : function(command){
+    	 this.removeFinishedCommand();//TODO add function taking explicit array as argument
+    	 var commands = this.getArrayCmds(command.direction);
+    	 this.insertCommand(commands, command);
     },
-*/
 
 
     reset : function(){
         this.floor = 0;
         this.state = "CLOSE";
-        this.commands = [];
-        this.curIndex = 0 ;
-        this.moving = "STOP";
+        this.phase = "UP";
+        this.upCommands = [];
+        this.downCommands = [];
+
     }
 }
 
@@ -228,7 +235,7 @@ function nextStep(){
         console.log("Actual State : ", elevator.floor + "e " + elevator.state);
 
         var actualState = elevator.state;
-        var nextState = elevator.changeState();
+        var nextState = elevator.executeNext();
 
         console.log("New State : ", elevator.floor + "e " + elevator.state );
         return ((nextState == actualState) && ( (nextState == "CLOSE") || (nextState == "OPEN")))
@@ -247,7 +254,8 @@ function call(toFloorCall, to){
         direction : to
     } 
 
-    console.log("CALL : ", command);    
+    console.log("CALL : ", command);
+
     return elevator.addCommand(command);
 }
 
@@ -255,7 +263,6 @@ function go(toGo){
     if(toGo == elevator.floor){
         return "";
     }
-
     var direction = (elevator.floor > toGo) ? "DOWN" : "UP";
     var command = {
         floor : toGo,
