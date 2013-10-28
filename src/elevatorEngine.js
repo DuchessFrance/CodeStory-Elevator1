@@ -20,6 +20,8 @@ var elevator = {
     upCommands : [],
     downCommands : [],
 
+    nbUsers : 0,
+
     isOpen : function(){
         return this.state == "OPEN";
     },
@@ -53,7 +55,11 @@ var elevator = {
         if( !command.floor && (command.floor != 0) ){
             return;
         }
-
+/*
+        if( ["UP", "DOWN"].indexOf(command.direction) == -1){
+            command.direction = (this.floor < command.floor ? "UP" : "DOWN") ;
+        }
+*/
         if(( command.floor > MAX_FLOOR) || (command.floor < MIN_FLOOR)){
             return "Hey what's the fuck is this floor you are asking !"
         }
@@ -167,30 +173,36 @@ var elevator = {
 	    console.log(this.downCommands);
 	    console.log(this.phase);
 	    var next = this.nextFromArray();
-	    if((next.direction != this.phase)
-	        && (this.floor == next.floor)
-	        && (this.state != "OPEN")
-	        && (this.getArrayCmds(this.phase).length > 1)){//next n'est pas à traiter maintenant
-	        this.changeArray(next);
-	        next = this.nextCommand();
-	    }
+
 		if(this.isFinished(next)){//same command as actual state
 		    this.removeFinishedCommand();
-		    next = this.nextCommand();
+		    return this.nextCommand();
 		}
+
+	    if((this.floor == next.floor) && this.isDiffered(next)){
+	        this.changeArray(next);
+	        return this.nextCommand();
+	    }
 		return next;
 
 	},
 
+	//if not same direction as current and other cmds, cmd should be reported
+	isDiffered : function(command){
+	    return (command.direction != this.phase)
+            && (this.getArrayCmds(this.phase).length > 1);
+	},
+
 	nextFromArray : function(){
-	    var next = null;
 	    var commands = this.getArrayCmds(this.phase);
-	    if(this.phase == "UP"){
-	        next = commands[0];
-	    }else{
-	        next = commands[commands.length - 1];
+	    if(commands.length == 0){
+	        this.changePhase();
+	        commands = this.getArrayCmds(this.phase);
+	        if(commands.length == 0){
+	            throw("no command in arrays !");
+	        }
 	    }
-	    return next;
+	    return (this.phase == "UP" ? commands[0] : commands[commands.length - 1] );
 	},
 
 	removeFinishedCommand : function(){
@@ -201,9 +213,11 @@ var elevator = {
 	        commands.pop();
 	    }
 
+/*
 		if(commands.length == 0){
 			this.changePhase();
 		}
+*/
 	},
 
     changeArray : function(command){
@@ -219,6 +233,7 @@ var elevator = {
         this.phase = "UP";
         this.upCommands = [];
         this.downCommands = [];
+        this.nbUsers = 0;
 
     }
 }
@@ -265,11 +280,13 @@ function go(toGo){
 
 function userHasEntered(){
     console.log("userHasEntered");
+    elevator.nbUsers ++;
     return "";
 }
 
 function userHasExited(){
     console.log("userHasExited");
+    elevator.nbUsers --;
     return "";
 }
 exports.nextCommand = nextStep;

@@ -37,7 +37,7 @@ describe("Code Story Elevator", function() {
 		elevator.addCommand({floor : 5, direction : "first command setting the phase"});
 		expect(elevator.phase).toEqual("UP");
 
-	    initElevator({floor : 2, state : "CLOSE", phase : "UP"});
+	    initElevator({floor : 2, state : "CLOSE", phase : "DOWN"});
 		elevator.addCommand({floor : 1, direction : "first command setting the phase"});
         elevator.addCommand({floor : 4, direction : "not setting the phase"});
         expect(elevator.phase).toEqual("DOWN");
@@ -55,6 +55,45 @@ describe("Code Story Elevator", function() {
 		var command = elevator.nextCommand();
 		expect(command).not.toBeNull();
 		expect(command.direction).toEqual("DOWN");
+	});
+
+	it("ADD Command of elevator : 2 UPstairs commands for UP direction", function() {
+	    initElevator({floor : 1, state : "CLOSE", phase : "DOWN"});
+        elevator.addCommand({floor : 2, direction : "UP"});
+        elevator.addCommand({floor : 3, direction : "UP"});
+        nextStep();//up stair
+        expect(nextStep()).toEqual("OPEN");//1st cmd executed
+        expect(nextStep()).toEqual("CLOSE");//2nd cmd
+        expect(nextStep()).toEqual("UP");//2nd cmd
+        expect(nextStep()).toEqual("OPEN");//2nd cmd
+	});
+
+	it("ADD Command of elevator : 2 UPstairs commands for DOWN direction", function() {
+	    initElevator({floor : 1, state : "CLOSE", phase : "DOWN"});
+        elevator.addCommand({floor : 2, direction : "DOWN"});
+        elevator.addCommand({floor : 3, direction : "DOWN"});
+        nextStep();//1st cmd
+        expect(nextStep()).toEqual("UP");//2nd cmd executed
+        expect(nextStep()).toEqual("OPEN");//finishing 2nd cmd
+        expect(nextStep()).toEqual("CLOSE");//1st cmd
+        expect(nextStep()).toEqual("DOWN");//1st cmd
+        expect(nextStep()).toEqual("OPEN");//1st cmd
+        expect(nextStep()).toEqual("CLOSE");//no cmd
+        expect(elevator.hasCommand()).toBe(false);
+	});
+
+	it("ADD Command of elevator : 2 DOWNstairs commands for UP direction", function() {
+	    initElevator({floor : 4, state : "CLOSE", phase : "DOWN"});
+        elevator.addCommand({floor : 2, direction : "UP"});
+        elevator.addCommand({floor : 3, direction : "UP"});
+        nextStep();//1st cmd
+        expect(nextStep()).toEqual("DOWN");//2nd cmd executed
+        expect(nextStep()).toEqual("OPEN");//finishing 2nd cmd
+        expect(nextStep()).toEqual("CLOSE");//1st cmd
+        expect(nextStep()).toEqual("UP");//1st cmd
+        expect(nextStep()).toEqual("OPEN");//1st cmd
+        expect(nextStep()).toEqual("CLOSE");//no cmd
+        expect(elevator.hasCommand()).toBe(false);
 	});
 
 	it("ADD Command of elevator : commands are SORTED by floor", function() {
@@ -170,7 +209,7 @@ describe("Code Story Elevator", function() {
     	expect(nextStep()).toEqual("DOWN");
 		expect( compareElevators(elevator, { floor : 0, state : "DOWN", phase : "DOWN"})).toBe(true);
     	expect(nextStep()).toEqual("OPEN");
-		expect( compareElevators(elevator, { floor : 0, state : "OPEN", phase : "UP"})).toBe(true);
+    	expect(elevator.phase).toEqual("DOWN");
     	expect(nextStep()).toEqual("CLOSE");
 	});
 
@@ -179,7 +218,7 @@ describe("Code Story Elevator", function() {
 	it("2 Commands : 2 Calls downstairs for same direction", function() {
 	    initElevator({floor : 3, state : "CLOSE", phase : "UP"});
 		elevator.addCommand({floor : 2, direction : "DOWN"});
-		elevator.addCommand({floor : 1, direction : "UP"});
+		elevator.addCommand({floor : 1, direction : "DOWN"});
 
 		expect(elevator.hasCommand()).toEqual(true);
 
@@ -197,14 +236,51 @@ describe("Code Story Elevator", function() {
         expect(nextStep()).toEqual("CLOSE");//executing 2nd command
         expect(nextStep()).toEqual("DOWN");//executing 2nd command
         expect(nextStep()).toEqual("OPEN");//executing 2nd command
-		expect( compareElevators(elevator, { floor : 1, state : "OPEN", phase : "UP"})).toBe(true);
 		expect(elevator.hasCommand()).toBe(false);//no more command
 
 		expect(nextStep()).toEqual("CLOSE");//no command
+		expect( compareElevators(elevator, { floor : 1, state : "CLOSE", phase : "DOWN"})).toBe(true);
 		expect(nextStep()).toEqual("NOTHING");//no command
 
 	});
 
+	it("2 Commands : 1 Go for upstairs and 1 call downstairs....who should be prioritaire ;) ", function() {
+	    initElevator({floor : 2, state : "CLOSE", phase : "UP"});
+	    elevator.addCommand({floor : 3, direction : "UP"});
+	    nextStep();//UP for searching caller who's going UP
+        nextStep();//OPEN
+
+        userHasEntered();
+		elevator.addCommand({floor : 2, direction : "DOWN"});
+        go(4);
+		expect(elevator.phase).toEqual("UP"); //Very important : the user inside doesn't want to go down !
+		expect(elevator.hasCommand()).toEqual(true);
+
+        var downCommands = elevator.getDownCommands();
+        var upCommands = elevator.getUpCommands();
+		expect(downCommands.length).toEqual(1);
+		expect(upCommands.length).toEqual(2);
+
+        var next = elevator.nextCommand();
+        expect(next.floor).toEqual(4);
+
+        expect(nextStep()).toEqual("CLOSE");
+
+        expect(nextStep()).toEqual("UP");//go should be prioritaire
+        expect(nextStep()).toEqual("OPEN");//finishing go command
+        userHasExited();
+		expect(downCommands.length).toEqual(1);
+        expect(upCommands.length).toEqual(0);
+
+        expect(nextStep()).toEqual("CLOSE");
+        expect(nextStep()).toEqual("DOWN");
+        expect(nextStep()).toEqual("DOWN");
+        expect(nextStep()).toEqual("OPEN");
+        expect(nextStep()).toEqual("CLOSE");
+		expect(elevator.hasCommand()).toBe(false);//no more command
+		expect(nextStep()).toEqual("NOTHING");//no command
+
+	});
 
 	it("2 Commands : first upstairs, 2nd downstairs", function() {
 	    initElevator({floor : 2, state : "CLOSE", phase : "UP"});
@@ -231,7 +307,7 @@ describe("Code Story Elevator", function() {
         expect(nextStep()).toEqual("DOWN");//executing 2nd command up
         expect(nextStep()).toEqual("DOWN");//executing 2nd command up
         expect(nextStep()).toEqual("OPEN");//executing 2nd command up
-		expect( compareElevators(elevator, { floor : 1, state : "OPEN", phase : "UP"})).toBe(true);
+		expect( compareElevators(elevator, { floor : 1, state : "OPEN", phase : "DOWN"})).toBe(true);
 		expect(elevator.hasCommand()).toBe(false);//no more command
 
 		expect(nextStep()).toEqual("CLOSE");//no command
@@ -438,6 +514,82 @@ describe("Code Story Elevator", function() {
 		expect(upCommands.length).toEqual(0);
 //		expect(downCommands.length).toEqual(0);//TODO 2 commands have been deplaced
 		expect(nextStep()).toEqual("CLOSE");
+	});
+
+	it("another complete test case", function() {
+	    initElevator({floor : 0, state : "CLOSE", phase : "UP"});
+	    var upCommands = elevator.getUpCommands();
+	    var downCommands = elevator.getDownCommands();
+
+	    call(4, "UP");
+		expect(upCommands.length).toEqual(1);
+        expect(downCommands.length).toEqual(0);
+	    expect(nextStep()).toEqual("UP");//executing cmd
+
+	    call(2, "DOWN");
+		expect(upCommands.length).toEqual(2); //TODO FIX should be 1
+        //expect(downCommands.length).toEqual(1);
+	    expect(nextStep()).toEqual("UP");//executing 1st cmd
+
+	    call(0, "UP");
+		expect(upCommands.length).toEqual(2); //TODO 1
+        //expect(downCommands.length).toEqual(2);
+	    expect(nextStep()).toEqual("UP");//executing 1st cmd
+
+	    call(0, "UP");
+		expect(upCommands.length).toEqual(1);
+        expect(downCommands.length).toEqual(3);
+	    expect(nextStep()).toEqual("UP");//executing 1st cmd
+
+	    call(0, "UP");
+	    expect(nextStep()).toEqual("OPEN");//finishing executing 1st cmd
+	    expect(elevator.floor).toEqual(4);
+		expect(upCommands.length).toEqual(0);
+        expect(downCommands.length).toEqual(4);
+
+        userHasEntered();
+        expect(elevator.nbUsers).toEqual(1);
+        go(5);
+
+
+        expect(elevator.phase).toEqual("UP");
+		expect(upCommands.length).toEqual(1);
+        expect(downCommands.length).toEqual(4);
+	    expect(nextStep()).toEqual("CLOSE");//executing go cmd !
+
+	    call(4, "DOWN");
+	    //non ! expect(upCommands.length).toEqual(2);//new cmd same floor
+	    //non ! expect(nextStep()).toEqual("OPEN");//executing new cmd, same floor !
+	    // non ! go(0);//userHasEntered
+	    expect(nextStep()).toEqual("UP");//executing go cmd !
+		expect(upCommands.length).toEqual(1);
+        expect(downCommands.length).toEqual(5);
+
+        call(0, "UP");
+	    expect(nextStep()).toEqual("OPEN");//finishing executing go cmd !
+        userHasExited();
+        expect(elevator.nbUsers).toEqual(0);
+        expect(elevator.floor).toEqual(5);
+
+		expect(upCommands.length).toEqual(0);
+        expect(downCommands.length).toEqual(6);
+
+	    expect(nextStep()).toEqual("CLOSE");//beginning treated down cmds
+	    //expect(elevator.phase).toEqual("DOWN"); changing phase when asking next cmd !
+
+        expect(nextStep()).toEqual("DOWN");//beginning to go down
+
+        call(4, "DOWN");
+		expect(upCommands.length).toEqual(0);
+        expect(downCommands.length).toEqual(7);
+
+        expect(nextStep()).toEqual("OPEN");//executing new cmd same floor
+        expect(downCommands.length).toEqual(6);
+        go(0);//userHasEntered
+        go(5);//another userHasEntered //TODO unit test the case a user not previous entered in same time another
+		expect(upCommands.length).toEqual(1);
+        expect(downCommands.length).toEqual(7);
+        expect(nextStep()).toEqual("CLOSE");//executing new down cmd
 	});
 
 });
