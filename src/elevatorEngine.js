@@ -64,9 +64,10 @@ var elevator = {
             return "Hey what's the fuck is this floor you are asking !"
         }
 
-        if(!this.hasCommand()){
+  /*      if(!this.hasCommand()){
             this.phase = (this.floor < command.floor) ? "UP" : "DOWN" ;
         }
+*/		
 
         var commands = (this.floor < command.floor) ? this.upCommands : this.downCommands ;
 
