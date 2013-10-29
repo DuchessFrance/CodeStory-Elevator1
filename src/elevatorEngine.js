@@ -170,9 +170,7 @@ var elevator = {
 	    if(!this.hasCommand()){
 	        return null;
 	    }
-	    console.log(this.upCommands);
-	    console.log(this.downCommands);
-	    console.log(this.phase);
+
 	    var next = this.nextFromArray();
 
 		if(this.isFinished(next)){//same command as actual state
@@ -240,12 +238,14 @@ var elevator = {
 }
 
 function nextStep(){
-        console.log("Actual State : ", elevator.floor + "e " + elevator.state);
-
+		var printOld = "Old State : " + elevator.floor + "e " + elevator.state ;
+		
         var actualState = elevator.state;
         var nextState = elevator.executeNext();
 
-        console.log("New State : ", elevator.floor + "e " + elevator.state );
+		var printNew = " - New State : " + elevator.floor + "e " + elevator.state ;
+        console.log(printOld + printNew);
+		
         return ((nextState == actualState) && ( (nextState == "CLOSE") || (nextState == "OPEN")))
                 ? "NOTHING" : nextState ;
 }
@@ -276,17 +276,18 @@ function go(toGo){
         floor : toGo,
         direction : direction
     }
+	console.log("GO : ", command);	
     return elevator.addCommand(command);
 }
 
 function userHasEntered(){
-    console.log("userHasEntered");
+    console.log("USERHasEntered");
     elevator.nbUsers ++;
     return "";
 }
 
 function userHasExited(){
-    console.log("userHasExited");
+    console.log("USERHasExited");
     elevator.nbUsers --;
     return "";
 }
