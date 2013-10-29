@@ -72,6 +72,7 @@ var elevator = {
             this.phase = (this.floor < command.floor) ? "UP" : "DOWN" ;
         }
 */		
+//        var commands = this.getArrayCmds(command.direction) ;
 
         var commands = (this.floor < command.floor) ? this.upCommands : this.downCommands ;
 
@@ -172,6 +173,7 @@ var elevator = {
 
 	nextCommand : function(){
 	    if(!this.hasCommand()){
+	    //should change phase ?
 	        return null;
 	    }
 

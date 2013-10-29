@@ -13,9 +13,6 @@ describe("Code Story Elevator", function() {
 		expect(nextStep()).toEqual("NOTHING");
 	});
 
-	it("Next Command of elevator : return null if no command left", function() {
-		expect(elevator.nextCommand()).toBeNull();
-	});
 
 //first command
 	it("ADD Command of elevator : bad command not added ", function() {
@@ -32,7 +29,28 @@ describe("Code Story Elevator", function() {
 		expect(elevator.hasCommand()).toBe(true);
 	});
 
-	it("NEXT Command of elevator : only on command in other sens : Changing the PHASE", function() {
+	it("Next Command of elevator : return null if no command left", function() {//TODO check what is done with null
+	    reset();
+	    expect(elevator.hasCommand()).toBe(false);
+		expect(elevator.nextCommand()).toBeNull();
+	});
+
+
+	it("NEXT Command of elevator : if one command in same sens, return it", function() {
+	    initElevator({floor : 2, state : "CLOSE", phase : "DOWN"});
+		elevator.addCommand({floor : 1, direction : "DOWN"});
+		var command = elevator.nextCommand();
+		expect(command.floor).toEqual(1);
+
+
+	    initElevator({floor : 2, state : "CLOSE", phase : "UP"});
+		elevator.addCommand({floor : 4, direction : "DOWN"});
+		var command = elevator.nextCommand();
+		expect(command.floor).toEqual(4);
+
+	});
+
+	it("NEXT Command of elevator : only one command in other sens : Changing the PHASE", function() {
 	    initElevator({floor : 2, state : "CLOSE", phase : "DOWN"});
 		elevator.addCommand({floor : 5, direction : "first command setting the phase"});
 		expect(elevator.phase).toEqual("DOWN");
@@ -40,7 +58,6 @@ describe("Code Story Elevator", function() {
         expect(elevator.phase).toEqual("UP");
 
 	    initElevator({floor : 2, state : "CLOSE", phase : "UP"});
-
 		elevator.addCommand({floor : 1, direction : "first command setting the phase"});
 
         expect(elevator.phase).toEqual("UP");
@@ -48,14 +65,72 @@ describe("Code Story Elevator", function() {
         expect(elevator.phase).toEqual("DOWN");
     });
 
+
+
     it("NEXT Command of elevator : one command in same sens, another in the opposite : Keeping the PHASE", function() {
         initElevator({floor : 2, state : "CLOSE", phase : "UP"});
         elevator.addCommand({floor : 1, direction : "other sens - not setting the phase"});
         elevator.addCommand({floor : 4, direction : "keeping the phase"});
 
         expect(elevator.phase).toEqual("UP");
-        elevator.nextCommand();
+        var nextCommand = elevator.nextCommand();
         expect(elevator.phase).toEqual("UP");
+        expect(nextCommand.floor).toEqual(4);
+    });
+    it("isFinished Command of elevator : true if same floor as actual and doors are open", function() {
+        initElevator({floor : 2, state : "OPEN", phase : "UP"});
+        var cmd1 = {floor : 2, direction : "UP"};
+        elevator.addCommand(cmd1);
+        elevator.addCommand({floor : 4, direction : "DOWN"});
+
+        expect(elevator.isFinished(cmd1)).toBe(true);
+        var nextCommand = elevator.nextCommand();
+        expect(nextCommand.floor).toEqual(4);
+    });
+
+    it("NEXT Command of elevator : 2 commands, 1st finished : remove it & return the next", function() {
+        initElevator({floor : 2, state : "OPEN", phase : "UP"});
+        elevator.addCommand({floor : 2, direction : "UP"});
+        elevator.addCommand({floor : 1, direction : "DOWN"});
+
+        var command = elevator.nextCommand();
+        expect(command.floor).toEqual(1);
+        expect(elevator.phase).toEqual("DOWN");
+    });
+
+    it("NEXT Command of elevator : 3 commands down after finishing the up phase", function() {
+        initElevator({floor : 4, state : "CLOSE", phase : "UP"});
+        elevator.addCommand({floor : 5, direction : "DOWN"});
+        elevator.addCommand({floor : 3, direction : "DOWN"});
+        elevator.addCommand({floor : 2, direction : "DOWN"});
+
+
+        var command = elevator.nextCommand();
+        expect(command.floor).toEqual(5);
+        expect(nextStep()).toEqual("UP");
+        expect(nextStep()).toEqual("OPEN");
+        userHasExited();
+        expect(nextStep()).toEqual("CLOSE");
+        expect(elevator.phase).toEqual("DOWN");
+
+        command = elevator.nextCommand();
+        expect(command.floor).toEqual(3);
+        expect(nextStep()).toEqual("DOWN");
+        expect(nextStep()).toEqual("DOWN");
+        expect(nextStep()).toEqual("OPEN");
+        userHasEntered();
+        elevator.addCommand({floor : 0, direction : "DOWN"});
+        expect(nextStep()).toEqual("CLOSE");
+        expect(nextStep()).toEqual("DOWN");
+        expect(nextStep()).toEqual("OPEN");
+        userHasEntered();
+        elevator.addCommand({floor : 0, direction : "DOWN"});
+        expect(nextStep()).toEqual("CLOSE");
+        expect(nextStep()).toEqual("DOWN");
+        expect(nextStep()).toEqual("DOWN");
+        expect(nextStep()).toEqual("OPEN");
+
+
     });
 
 
@@ -156,11 +231,11 @@ describe("Code Story Elevator", function() {
 		elevator.addCommand({floor : 1, direction : "UP"});
 
 		expect(elevator.hasCommand()).toEqual(true);
-		expect(elevator.phase).toEqual("DOWN");//downstairs floor
 		expect(elevator.getUpCommands().length).toEqual(0);
 		expect(elevator.getDownCommands().length).toEqual(1);
 
 		var command = elevator.nextCommand();
+		expect(elevator.phase).toEqual("DOWN");//downstairs floor
 		expect(command).not.toBeNull();
 		expect(command.direction).toEqual("UP");
 
@@ -221,7 +296,7 @@ describe("Code Story Elevator", function() {
 	});
 
 	it("next step of DOWN is OPEN after arrived at floor", function() {
-	    initElevator({floor : 1, state : "DOWN"});
+	    initElevator({floor : 1, state : "DOWN", phase : "UP"});
     	elevator.addCommand({floor : 0, direction : "UP"});
 
     	expect(nextStep()).toEqual("DOWN");
@@ -277,7 +352,7 @@ describe("Code Story Elevator", function() {
         var downCommands = elevator.getDownCommands();
         var upCommands = elevator.getUpCommands();
 		expect(downCommands.length).toEqual(1);
-		expect(upCommands.length).toEqual(2);
+		expect(upCommands.length).toEqual(1);
 
         var next = elevator.nextCommand();
         expect(next.floor).toEqual(4);
@@ -399,7 +474,7 @@ describe("Code Story Elevator", function() {
 
 
         expect(elevator.hasCommand()).toBe(false);
-        expect( compareElevators(elevator, { floor : 3, state : "CLOSE", phase : "DOWN"})).toBe(true);
+        expect( compareElevators(elevator, { floor : 3, state : "CLOSE", phase : "UP"})).toBe(true);
         expect(nextStep()).toEqual("NOTHING");//no command
 	});
 
@@ -437,8 +512,11 @@ describe("Code Story Elevator", function() {
 		nextStep();
 		expect(elevator.state).toEqual("OPEN");
 		expect(elevator.floor).toEqual(1);
-		expect(elevator.phase).toEqual("DOWN");
 		expect(elevator.hasCommand()).toBe(false);
+
+		nextStep();
+		expect(elevator.state).toEqual("CLOSE");
+		expect(elevator.phase).toEqual("UP");
 	});
 
 
@@ -498,8 +576,9 @@ describe("Code Story Elevator", function() {
 	    var downCommands = elevator.getDownCommands();
 		expect(upCommands.length).toEqual(0);
 		expect(downCommands.length).toEqual(1);
-		expect(elevator.phase).toEqual("DOWN");
+		expect(elevator.phase).toEqual("UP");
 		expect(nextStep()).toEqual("CLOSE");
+		expect(elevator.phase).toEqual("DOWN");
 		expect(nextStep()).toEqual("DOWN");
 		expect(nextStep()).toEqual("OPEN");
 		expect(elevator.hasCommand()).toBe(false);
