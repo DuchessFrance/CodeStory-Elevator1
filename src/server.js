@@ -20,6 +20,9 @@ function start() {
         }else if(command == "go"){
             var query = require('url').parse(request.url,true).query;
             response.write(elevator.go(query.floorToGo));
+        }else if(command == "reset"){
+            var query = require('url').parse(request.url,true).query;
+            response.write(elevator.reset(query.cause));
 
         }else{
             response.write(elevator[command]());

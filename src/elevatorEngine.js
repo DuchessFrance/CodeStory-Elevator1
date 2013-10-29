@@ -31,6 +31,10 @@ var elevator = {
         return (this.upCommands.length > 0) || (this.downCommands.length > 0) ;
     },
 
+    nbCommands : function(){
+      return this.upCommands.length + this.downCommands.length ;
+    },
+
     getArrayCmds : function(way){
         return way == "DOWN"? this.downCommands : this.upCommands;
     },
@@ -238,20 +242,25 @@ var elevator = {
 }
 
 function nextStep(){
-		var printOld = "Old State : " + elevator.floor + "e " + elevator.state ;
+		var printOld = "Old : " + elevator.floor + "/" + elevator.state + "/cmds:" +elevator.nbCommands() ;
 		
         var actualState = elevator.state;
         var nextState = elevator.executeNext();
 
-		var printNew = " - New State : " + elevator.floor + "e " + elevator.state ;
-        console.log(printOld + printNew);
-		
-        return ((nextState == actualState) && ( (nextState == "CLOSE") || (nextState == "OPEN")))
-                ? "NOTHING" : nextState ;
+		var printNew = " --- New : " + elevator.floor + "/" + elevator.state + "/cmds:" +elevator.nbCommands()  ;
+
+        console.log("STATE : " + printOld + printNew);
+
+        var ret = ((nextState == actualState) && ( (nextState == "CLOSE") || (nextState == "OPEN")))
+            ? "NOTHING" : nextState ;
+
+        console.log("NEXTSTEP : " + ret);
+
+        return ret;
 }
 
-function reset(){
-    console.log("RESET");
+function reset(cause){
+    console.log("RESET : " + cause);
     elevator.reset();
     return "";
 }
